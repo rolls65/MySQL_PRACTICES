@@ -309,3 +309,107 @@ FROM tutorial.crunchbase_companies_clean_date company
 SELECT incidnt_num,date,SUBSTR(date, 4, 2) AS day
   FROM tutorial.sf_crime_incidents_2014_01
   
+ SELECT incidnt_num,
+RIGHT(date,17) as cleaned_time,
+       LEFT(date, 10) AS cleaned_date  
+  FROM tutorial.sf_crime_incidents_2014_01
+
+SELECT location,
+       TRIM(both '()' FROM location)
+  FROM tutorial.sf_crime_incidents_2014_01
+  
+SELECT location,
+trim(leading '(' from LEFT(location,POSITION(',' IN location)-1))  as lattitude,
+trim(trailing ')' from RIGHT(location,LENGTH(location) - POSITION(',' IN location)))  as longitude
+FROM tutorial.sf_crime_incidents_2014_01
+
+SELECT location,LEFT(location,POSITION(',' IN location)) as pos 
+FROM tutorial.sf_crime_incidents_2014_01
+
+select CONCAT('(',lat,' , ', lon, ')') as location FROM tutorial.sf_crime_incidents_2014_01
+ 
+select '(' || lat || ' , ' || lon || ')' as location FROM tutorial.sf_crime_incidents_2014_01
+
+ select date,SUBSTR(date, 7, 4)||'-'||LEFT(date,2)||'-'||SUBSTR(date,4,2) as newdate 
+ from  tutorial.sf_crime_incidents_2014_01
+ 
+ select category,
+ UPPER(SUBSTR(category,1,1))||''||LOWER(SUBSTR(category,2,length(category)-1)) as newcategory 
+ from  tutorial.sf_crime_incidents_2014_01
+ 
+ select date,
+ (substr(date,7,4)||'-'||LEFT(date,2)||'-'||substr(date,4,2)||' '|| time || ':00')::timestamp as newdate,
+  (substr(date,7,4)||'-'||LEFT(date,2)||'-'||substr(date,4,2)||' '|| time || ':00')::timestamp 
+ + INTERVAL '1 week' AS newtimestamp
+ from  tutorial.sf_crime_incidents_2014_01
+ 
+ SELECT DATE_TRUNC('week', cleaned_date)::date AS week,COUNT(*) AS incidents
+  FROM tutorial.sf_crime_incidents_cleandate
+ GROUP BY 1
+ ORDER BY 1
+ 
+ SELECT cleaned_date,NOW() AT TIME ZONE 'UTC-8' AS now,NOW() AT TIME ZONE 'UTC-8' - cleaned_date AS time_ago 
+  FROM tutorial.sf_crime_incidents_cleandate
+
+SELECT descript,COALESCE(descript, 'No Description')
+  FROM tutorial.sf_crime_incidents_cleandate
+ ORDER BY descript DESC
+ 
+select * from (SELECT *
+              FROM tutorial.sf_crime_incidents_2014_01
+             WHERE descript = 'WARRANT ARREST') sub where sub.resolution='NONE';
+             
+select category,sub.month,avg(sub.incidents) as avg_incidents from 
+(select extract('month' from cleaned_date) as month ,category,count(1) as incidents
+ FROM tutorial.sf_crime_incidents_cleandate
+ group by 1,2) sub 
+ group by 1,2;
+
+select c.*,sub.incidents as total_incidents from tutorial.sf_crime_incidents_2014_01 c
+ join (select category,count(1) as incidents
+ from tutorial.sf_crime_incidents_2014_01
+ group by 1
+ order by 2
+ limit 3) sub on (sub.category=c.category);
+ 
+ SELECT COALESCE(companies.quarter, acquisitions.quarter) AS quarter,companies.companies_founded,acquisitions.companies_acquired
+      FROM (
+            SELECT founded_quarter AS quarter,COUNT(permalink) AS companies_founded
+              FROM tutorial.crunchbase_companies
+             WHERE founded_year >= 2012
+             GROUP BY 1
+           ) companies
+      LEFT JOIN (
+            SELECT acquired_quarter AS quarter,COUNT(DISTINCT company_permalink) AS companies_acquired
+              FROM tutorial.crunchbase_acquisitions
+             WHERE acquired_year >= 2012
+             GROUP BY 1
+           ) acquisitions
+        ON companies.quarter = acquisitions.quarter
+     ORDER BY 1
+     
+SELECT investor_name,COUNT(*) AS investments
+  FROM (
+        SELECT * FROM tutorial.crunchbase_investments_part1
+         UNION ALL
+         SELECT * FROM tutorial.crunchbase_investments_part2
+       ) sub
+ GROUP BY 1
+ ORDER BY 2 DESC
+ 
+SELECT investments.investor_name,COUNT(investments.*) AS investments
+  FROM tutorial.crunchbase_companies companies
+  JOIN (SELECT * FROM tutorial.crunchbase_investments_part1
+         UNION ALL
+         SELECT * FROM tutorial.crunchbase_investments_part2
+       ) investments
+    ON investments.company_permalink = companies.permalink
+ WHERE companies.status = 'operating'
+ GROUP BY 1
+ ORDER BY 2 DESC
+ 
+SELECT duration_seconds,SUM(duration_seconds) OVER (ORDER BY start_time) AS running_total
+  FROM tutorial.dc_bikeshare_q1_2012
+  
+
+  
